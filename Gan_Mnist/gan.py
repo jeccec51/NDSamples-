@@ -6,7 +6,7 @@ import torchvision.transforms as transforms
 import torch.nn  as nn
 import torch.nn.functional as F
 import torch.optim as optim
-
+import pickle pkl
 
 num_workers = 0
 batch_size = 64
@@ -78,6 +78,9 @@ z_size = 100
 g_output_size = 784
 g_hidden_size = 32
 
+lr = 0.002
+
+
 D = Discriminator(input_size, d_hidden_size, d_output_size)
 G = Generator(z_size, g_hidden_size, g_output_size)
 
@@ -101,9 +104,67 @@ def fake_loss(D_out):
     return loss
 
 
+d_optimizer = optim.Adam(D.parameters(), lr)
+g_optimizer = optim.Adam(G.parameters(), lr)
+
+num_eopchs = 100
+samples = []
+losses = []
+
+print_every = 400
+
+# Get Some Fixed Data for sampling
+
+sample_size = 16
+fixed_z = np.random.uniform(-1, 1, size = (sample_size, z_size))
+fixed_z = torch.from_numpy(fixed_z).float()
+
+#Train Network
+D.train()
+G.train()
+
+for epoch in range(num_eopchs):
+    for batch_i, (real_images, _) in enumerate(train_loader):
+        batch_size = real_images.size(0)
+        real_images = real_images * 2 - 1
+        # Train Discriminator
+        d_optimizer.zero_grad()
+        D_real = D(real_images)
+        d_real_loss = real_loss(D_real, smooth=True)
+        z = np.random.uniform(-1, 1, size=(batch_size, z_size))
+        z = torch.from_numpy(z).float()
+        fake_images = G(z)
+        D_fake = D(fake_images)
+        d_fake_loss = fake_loss(D_fake)
+        d_loss = d_real_loss + d_fake_loss
+        d_loss.backward()
+        d_optimizer.step()
+
+        # Train Generator
+        g_optimizer.zero_grad()
+        # Train with fake image and lipped labels
+        z = np.random.uniform(-1, 1, size=(batch_size, z_size))
+        z = torch.from_numpy(z).float()
+        fake_images = G(z)
+
+        #Compute Discriminator losses on fake images using flipped labels
+        D_fake = D(fake_images)
+        g_loss = real_loss(D_fake)
+        g_loss.backward()
+        g_optimizer.step()
+
+        #Print loss status
+        if batch_i % print_every == 0:
+            print('Epoch [{:5d}/{:5d}] | d_loss: {:6.4f} | g_loss: {:6.4f}'.format(
+                    epoch+1, num_eopchs, d_loss.item(), g_loss.item()))
+    losses.append((d_loss.item(), g_loss.item()))
+    G.eval()
+    samples_z = G(fixed_z)
+    samples.append(samples_z)
+    G.train()
+
+with open('train_samples.pkl', 'wb') as f:
+    pkl.dump(samples, f)
 
 
-print(D)
-print()
-print(G)
 
