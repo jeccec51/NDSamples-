@@ -3,10 +3,10 @@ import torch
 import matplotlib.pyplot as plt
 from torchvision import datasets
 import torchvision.transforms as transforms
-import torch.nn  as nn
+import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import pickle pkl
+import pickle as pkl
 
 num_workers = 0
 batch_size = 64
@@ -80,7 +80,6 @@ g_hidden_size = 32
 
 lr = 0.002
 
-
 D = Discriminator(input_size, d_hidden_size, d_output_size)
 G = Generator(z_size, g_hidden_size, g_output_size)
 
@@ -92,7 +91,7 @@ def real_loss(D_out, smooth=False):
     else:
         label = torch.ones(batch_size_output)
     criterion = nn.BCEWithLogitsLoss()
-    loss = criterion(D_out.squeez(), label)
+    loss = criterion(D_out.squeeze(), label)
     return loss
 
 
@@ -116,10 +115,10 @@ print_every = 400
 # Get Some Fixed Data for sampling
 
 sample_size = 16
-fixed_z = np.random.uniform(-1, 1, size = (sample_size, z_size))
+fixed_z = np.random.uniform(-1, 1, size=(sample_size, z_size))
 fixed_z = torch.from_numpy(fixed_z).float()
 
-#Train Network
+# Train Network
 D.train()
 G.train()
 
@@ -147,16 +146,16 @@ for epoch in range(num_eopchs):
         z = torch.from_numpy(z).float()
         fake_images = G(z)
 
-        #Compute Discriminator losses on fake images using flipped labels
+        # Compute Discriminator losses on fake images using flipped labels
         D_fake = D(fake_images)
         g_loss = real_loss(D_fake)
         g_loss.backward()
         g_optimizer.step()
 
-        #Print loss status
+        # Print loss status
         if batch_i % print_every == 0:
             print('Epoch [{:5d}/{:5d}] | d_loss: {:6.4f} | g_loss: {:6.4f}'.format(
-                    epoch+1, num_eopchs, d_loss.item(), g_loss.item()))
+                epoch + 1, num_eopchs, d_loss.item(), g_loss.item()))
     losses.append((d_loss.item(), g_loss.item()))
     G.eval()
     samples_z = G(fixed_z)
@@ -166,5 +165,50 @@ for epoch in range(num_eopchs):
 with open('train_samples.pkl', 'wb') as f:
     pkl.dump(samples, f)
 
+# Plot loss
+fig, ax = plt.subplots()
+losses = np.array(losses)
+plt.plot(losses.T[0], label='Discrimnator')
+plt.plot(losses.T[1], label='Generator')
+plt.title("Training Losses")
+plt.legend()
 
 
+# Function for viewing list of passed samples
+
+def view_samples(epoch_i, image_samples):
+    fig, axes = plt.subplots(figsize=(7, 7), nrows=4, ncols=4, sharey=True, sharex=True)
+    for ax, img in zip(axes.flatten(), image_samples[epoch_i]):
+        img = img.detach()
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+        im = ax.imshow(img.reshape((28, 28)), cmap='Greys_r')
+
+
+with open('train_samples.pkl', 'rb') as f:
+    samples = pkl.load(f)
+view_samples(-1, samples)
+
+rows = 10  # split epochs into 10, so 100/10 = every 10 epochs
+cols = 6
+fig1, axes1 = plt.subplots(figsize=(7, 12), nrows=rows, ncols=cols, sharex=True, sharey=True)
+
+for sample, ax_row in zip(samples[::int(len(samples) / rows)], axes1):
+    for img, ax in zip(sample[::int(len(sample) / cols)], ax_row):
+        img = img.detach()
+        ax.imshow(img.reshape((28, 28)), cmap='Greys_r')
+        ax.xaxis.set_visible(False)
+        ax.yaxis.set_visible(False)
+
+# randomly generated, new latent vectors
+sample_size = 16
+rand_z = np.random.uniform(-1, 1, size=(sample_size, z_size))
+rand_z = torch.from_numpy(rand_z).float()
+
+G.eval()  # eval mode
+# generated samples
+rand_images = G(rand_z)
+
+# 0 indicates the first set of samples in the passed in list
+# and we only have one batch of samples, here
+view_samples(0, [rand_images])
