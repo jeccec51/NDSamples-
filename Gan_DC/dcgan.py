@@ -15,6 +15,8 @@ svhn_train = datasets.SVHN(root='data/', split='train', download=True, transform
 batch_size = 128
 num_workers = 0
 
+train_on_gpu = torch.cuda.is_available()
+
 # Build Data Loader
 train_loader = torch.utils.data.DataLoader(dataset=svhn_train, batch_size=batch_size,
                                            shuffle=True, num_workers=num_workers)
@@ -101,8 +103,6 @@ cnv_dim = 32
 z_size1 = 100
 D = Discriminator(cnv_dim)
 G = Generator(z_size1, conv_dim=cnv_dim)
-
-train_on_gpu = torch.cuda.is_available()
 if train_on_gpu:
     G.cuda()
     D.cuda()
