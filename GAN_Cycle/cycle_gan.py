@@ -14,7 +14,7 @@ import warnings
 
 def get_data_loader(image_type, image_dir='summer2winter_yosemite', image_size=128, batch_size=16, num_workers=0):
     transform = transforms.Compose([transforms.Resize(image_size), transforms.ToTensor()])
-    image_path = './' + image_dir
+    image_path = image_dir
     train_path = os.path.join(image_path, image_type)
     test_path = os.path.join(image_path, 'test_{}'.format(image_type))
     # Define Data Sets
@@ -27,7 +27,7 @@ def get_data_loader(image_type, image_dir='summer2winter_yosemite', image_size=1
     return train_data_loader, test_data_loader
 
 
-dataloader_X, test_dataloader_X = get_data_loader(image_size='summer')
+dataloader_X, test_dataloader_X = get_data_loader(image_type='summer')
 dataloader_Y, test_dataloader_Y = get_data_loader(image_type='winter')
 
 
